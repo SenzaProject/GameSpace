@@ -290,7 +290,7 @@ public class MainActivity extends Activity {
             liveFps.setTextColor(Ui.fpsColor(f, FpsState.hz));
             liveSub.setText(f > 0 ? String.format(Locale.US, "FPS \u2022 %.1f ms \u2022 %d Hz",
                     FpsState.frameMs, Math.round(FpsState.hz)) : "FPS");
-            liveLayer.setText(FpsState.layer.isEmpty() ? "" : "Sumber: SurfaceFlinger \u2022 " + FpsState.layer);
+            liveLayer.setText(FpsState.layer.isEmpty() ? "" : "Sumber: " + FpsState.layer);
         }
         graph.set(FpsState.recent(60), FpsState.hz);
         float[] st = FpsState.stats();
@@ -575,8 +575,8 @@ public class MainActivity extends Activity {
         LinearLayout head = Ui.col(this);
         head.setGravity(Gravity.CENTER_HORIZONTAL);
         ImageView logo = new ImageView(this);
-        logo.setImageDrawable(getPackageManager().getApplicationIcon(getApplicationInfo()));
-        head.addView(logo, new LinearLayout.LayoutParams(Ui.dp(this, 96), Ui.dp(this, 96)));
+        logo.setImageResource(R.drawable.logo_senza);
+        head.addView(logo, new LinearLayout.LayoutParams(Ui.dp(this, 132), Ui.dp(this, 132)));
         TextView name = Ui.tv(this, "Game Space", 26, Ui.TEXT, true);
         name.setGravity(Gravity.CENTER);
         head.addView(name, Ui.lp(this, WRAP, WRAP, 0, 8, 0, 0));

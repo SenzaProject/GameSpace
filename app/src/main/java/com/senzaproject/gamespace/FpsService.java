@@ -25,6 +25,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.Locale;
 import java.util.Set;
@@ -32,6 +33,7 @@ import java.util.Set;
 /** Service foreground: membaca FPS via root dan menampilkan overlay melayang. */
 public class FpsService extends Service {
     static final String ACTION_STOP = "com.senzaproject.gamespace.STOP";
+    static final String ACTION_DIAG = "com.senzaproject.gamespace.DIAG";
     private static final String CH = "gs_monitor";
 
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -63,6 +65,11 @@ public class FpsService extends Service {
             Store.sp(this).edit().putBoolean("monitor_on", false).apply();
             stopSelf();
             return START_NOT_STICKY;
+        }
+        if (intent != null && ACTION_DIAG.equals(intent.getAction())) {
+            startFg();
+            runDiag();
+            return START_STICKY;
         }
         startFg();
         if (!alive) {
@@ -103,7 +110,7 @@ public class FpsService extends Service {
             gameSet = Store.games(this);
             lastGameLoad = now;
         }
-        if (now - lastFg >= 1000 || fgPkg.isEmpty()) {
+        if (now - lastFg >= 400 || fgPkg.isEmpty()) {
             String p = reader.foregroundPackage();
             if (p != null) fgPkg = p;
             lastFg = now;
@@ -137,10 +144,11 @@ public class FpsService extends Service {
         if (s.fps > 0) FpsState.push(s.fps);
 
         final float f = s.fps, ms = s.frameMs, hz = FpsState.hz;
+        final String note = s.note;
         wantShown = true;
         main.post(() -> {
             setOverlayVisible(true);
-            updateOverlay(f, ms, hz);
+            updateOverlay(f, ms, hz, note);
         });
     }
 
@@ -244,7 +252,7 @@ public class FpsService extends Service {
         }
     }
 
-    private void updateOverlay(float fps, float ms, float hz) {
+    private void updateOverlay(float fps, float ms, float hz, String note) {
         if (box == null) return;
         applyStyle();
         tvFps.setTextColor(Ui.fpsColor(fps, hz));
@@ -252,7 +260,31 @@ public class FpsService extends Service {
         float target = hz > 0 ? hz : 60f;
         tvSub.setText(fps > 0
                 ? String.format(Locale.US, "%.1f ms \u00B7 %d Hz", ms, Math.round(target))
-                : "menunggu frame...");
+                : (note == null || note.isEmpty() ? "menunggu frame..." : note));
+    }
+
+    // ---------- diagnosa ----------
+
+    private void runDiag() {
+        if (bg == null) return;
+        final String pkg = !lastPkg.isEmpty() ? lastPkg : fgPkg;
+        bg.post(() -> {
+            String msg;
+            try {
+                String rep = reader.diagnose(pkg);
+                java.io.File f = new java.io.File(getCacheDir(), "diagnosa.txt");
+                java.io.FileWriter w = new java.io.FileWriter(f);
+                w.write(rep);
+                w.close();
+                RootShell.run("mkdir -p /sdcard/Download; cp '" + f.getAbsolutePath()
+                        + "' /sdcard/Download/GameSpace-diagnosa.txt; chmod 666 /sdcard/Download/GameSpace-diagnosa.txt");
+                msg = "Diagnosa disimpan: Download/GameSpace-diagnosa.txt";
+            } catch (Exception e) {
+                msg = "Diagnosa gagal disimpan";
+            }
+            final String m = msg;
+            main.post(() -> Toast.makeText(this, m, Toast.LENGTH_LONG).show());
+        });
     }
 
     // ---------- notifikasi ----------
@@ -268,6 +300,8 @@ public class FpsService extends Service {
                 this, 0, new Intent(this, MainActivity.class), imm);
         PendingIntent stop = PendingIntent.getService(
                 this, 1, new Intent(this, FpsService.class).setAction(ACTION_STOP), imm);
+        PendingIntent diag = PendingIntent.getService(
+                this, 2, new Intent(this, FpsService.class).setAction(ACTION_DIAG), imm);
         Notification n = new Notification.Builder(this, CH)
                 .setSmallIcon(R.drawable.ic_stat)
                 .setContentTitle("Game Space")
@@ -276,6 +310,8 @@ public class FpsService extends Service {
                 .setOngoing(true)
                 .addAction(new Notification.Action.Builder(
                         Icon.createWithResource(this, R.drawable.ic_stat), "Matikan", stop).build())
+                .addAction(new Notification.Action.Builder(
+                        Icon.createWithResource(this, R.drawable.ic_stat), "Diagnosa", diag).build())
                 .build();
         if (Build.VERSION.SDK_INT >= 34) {
             startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);

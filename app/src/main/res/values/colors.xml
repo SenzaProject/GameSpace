@@ -2,4 +2,5 @@
     <color name="gs_bg">#0B0F1A</color>
     <color name="gs_card">#141B2D</color>
     <color name="gs_accent">#00E5FF</color>
+    <color name="ic_launcher_background">#000000</color>
 </resources>

@@ -1,0 +1,10 @@
+<resources>
+    <style name="Theme.GameSpace" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/gs_bg</item>
+        <item name="android:statusBarColor">@color/gs_bg</item>
+        <item name="android:navigationBarColor">@color/gs_card</item>
+        <item name="android:colorAccent">@color/gs_accent</item>
+        <item name="android:colorControlActivated">@color/gs_accent</item>
+        <item name="android:textColorPrimary">#E8ECF8</item>
+    </style>
+</resources>
